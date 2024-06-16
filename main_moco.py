@@ -288,6 +288,13 @@ def main_worker(gpu, ngpus_per_node, args):
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
 
+    # SGD 随机梯度下降优化器 
+    # momentum: 动量因子, 表示了之前所有梯度的指数加权平均, 它积累了之前梯度的方向和大小。
+    # 使模型参数不仅依赖当前梯度, 还考虑之前梯度这样可以在较平滑的方向上加速收敛, 减少在陡峭区域的震荡。
+    
+    # weight_decay: 权重衰减因子, 用于防止模型过拟合。
+    # 权重衰减的作用是在每次更新参数时对参数值进行轻微的惩罚，从而防止参数值过大，有助于提升模型的泛化能力。
+
     optimizer = torch.optim.SGD(
         model.parameters(),
         args.lr,
@@ -347,6 +354,7 @@ def main_worker(gpu, ngpus_per_node, args):
             normalize,
         ]
 
+    # 创建了一个训练数据集，其中的图像数据将会被预处理成两个视图
     train_dataset = datasets.ImageFolder(
         traindir, moco.loader.TwoCropsTransform(transforms.Compose(augmentation))
     )

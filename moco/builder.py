@@ -32,6 +32,7 @@ class MoCo(nn.Module):
         self.encoder_k = base_encoder(num_classes=dim)
 
         if mlp:  # hack: brute-force replacement
+            # 对 encoder_q 和 encoder_k 的全连接层 (fc) 进行修改，添加一个多层感知器（MLP）
             dim_mlp = self.encoder_q.fc.weight.shape[1]
             self.encoder_q.fc = nn.Sequential(
                 nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc
@@ -40,6 +41,8 @@ class MoCo(nn.Module):
                 nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc
             )
 
+
+        # 两个编码器使用相同的参数，并且停止编码器k的更新
         for param_q, param_k in zip(
             self.encoder_q.parameters(), self.encoder_k.parameters()
         ):
@@ -47,6 +50,8 @@ class MoCo(nn.Module):
             param_k.requires_grad = False  # not update by gradient
 
         # create the queue
+
+        # 在保存模型时会将 register_buffer 存储的值一起保存，下次读取模型时会一起读取
         self.register_buffer("queue", torch.randn(dim, K))
         self.queue = nn.functional.normalize(self.queue, dim=0)
 
@@ -62,6 +67,10 @@ class MoCo(nn.Module):
         ):
             param_k.data = param_k.data * self.m + param_q.data * (1.0 - self.m)
 
+    # queue: shape(dim, k_size)
+    # key T: shape(dim, batch_size)
+    # insert: queue[:, begin:end] = ket T
+    
     @torch.no_grad()
     def _dequeue_and_enqueue(self, keys):
         # gather keys before updating queue
